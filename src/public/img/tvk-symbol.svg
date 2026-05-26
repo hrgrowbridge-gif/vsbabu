@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="TVK Symbol">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#ffe8a9"/>
+      <stop offset="100%" stop-color="#d5a82e"/>
+    </radialGradient>
+  </defs>
+  <rect width="320" height="320" rx="28" fill="#7a1020"/>
+  <circle cx="160" cy="140" r="84" fill="url(#g)"/>
+  <path d="M160 64 L182 118 L238 121 L194 156 L208 213 L160 181 L112 213 L126 156 L82 121 L138 118 Z" fill="#8a1222"/>
+  <text x="160" y="272" text-anchor="middle" font-size="52" font-family="Arial, sans-serif" fill="#f7d77f" font-weight="800">TVK</text>
+</svg>

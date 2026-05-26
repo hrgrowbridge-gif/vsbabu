@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<%- include('partials/head', { title: 'MLA Dashboard Login' }) %>
+<body class="admin-body">
+  <main class="admin-login-page">
+    <section class="admin-login-card">
+      <p class="eyebrow">AUTHORIZED ACCESS ONLY</p>
+      <h1>MLA Dashboard Login</h1>
+      <p>Use the admin credentials configured in your .env file.</p>
+
+      <% if (errorMessage) { %>
+        <div class="flash error"><%= errorMessage %></div>
+      <% } %>
+
+      <form action="/secure-mla-login" method="POST" class="admin-login-form">
+        <label>
+          Username
+          <input type="text" name="username" required />
+        </label>
+        <label>
+          Password
+          <input type="password" name="password" required />
+        </label>
+        <button type="submit">Login</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

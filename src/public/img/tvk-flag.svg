@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="TVK Flag">
+  <defs>
+    <linearGradient id="tvkRed" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a30f22"/>
+      <stop offset="100%" stop-color="#6d0918"/>
+    </linearGradient>
+    <linearGradient id="tvkYellow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f2c33a"/>
+      <stop offset="100%" stop-color="#cf981f"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#tvkRed)"/>
+  <rect y="240" width="640" height="120" fill="url(#tvkYellow)"/>
+  <circle cx="320" cy="180" r="92" fill="#fff5d2"/>
+  <path d="M320 95 L341 150 L401 153 L355 190 L369 248 L320 215 L271 248 L285 190 L239 153 L299 150 Z" fill="#8b1020"/>
+  <text x="320" y="328" text-anchor="middle" font-size="34" font-family="Arial, sans-serif" fill="#50130f" font-weight="700">TVK</text>
+</svg>

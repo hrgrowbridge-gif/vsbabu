@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<%- include('partials/head', { title: 'Raise Complaint | Kolathur' }) %>
+<body>
+  <%- include('partials/site-header', { activePage: 'complaint' }) %>
+
+  <header class="page-hero green">
+    <div class="container">
+      <p class="eyebrow" data-en="PUBLIC SERVICE DESK" data-ta="பொது சேவை மேசை">PUBLIC SERVICE DESK</p>
+      <h1 data-en="Raise Complaint (Kolathur Only)" data-ta="புகார் அளிக்கவும் (கொளத்தூர் மட்டும்)">Raise Complaint (Kolathur Only)</h1>
+      <p class="subhead" data-en="Submit verified grievance details with required proof for constituency review." data-ta="தேவையான ஆவணங்களுடன் புகார் விவரங்களை சமர்ப்பிக்கவும்.">Submit verified grievance details with required proof for constituency review.</p>
+    </div>
+  </header>
+
+  <main class="container page-main">
+    <section class="complaint-wrap single">
+      <div class="complaint-intro">
+        <p data-en="Ensure your contact details are correct so office staff can follow up quickly." data-ta="உங்கள் தொடர்பு விவரங்கள் சரியாக உள்ளதை உறுதி செய்யுங்கள்.">Ensure your contact details are correct so office staff can follow up quickly.</p>
+
+        <% if (successMessage) { %>
+          <div class="flash success"><%= successMessage %></div>
+        <% } %>
+
+        <% if (errorMessage) { %>
+          <div class="flash error"><%= errorMessage %></div>
+        <% } %>
+      </div>
+
+      <form class="complaint-form" action="/complaints" method="POST" enctype="multipart/form-data">
+        <label>
+          <span data-en="Full Name" data-ta="முழு பெயர்">முழு பெயர்</span>
+          <input type="text" name="fullName"
+            data-placeholder-en="Enter your name"
+            data-placeholder-ta="உங்கள் பெயரை உள்ளிடுங்கள்"
+            placeholder="Enter your name" required />
+        </label>
+
+        <label>
+          <span data-en="Phone Number" data-ta="தொலைபேசி எண்">தொலைபேசி எண்</span>
+          <input type="tel" name="phone" pattern="[0-9]{10}" maxlength="10"
+            data-placeholder-en="10-digit mobile number"
+            data-placeholder-ta="10 இலக்க கைபேசி எண்"
+            placeholder="10-digit mobile number" required />
+        </label>
+
+        <label>
+          <span data-en="Area" data-ta="பகுதி">பகுதி</span>
+          <input type="text" name="area" value="Kolathur" readonly required />
+        </label>
+
+        <label>
+          <span data-en="Street Name" data-ta="தெரு பெயர்">தெரு பெயர்</span>
+          <input type="text" name="streetName"
+            data-placeholder-en="Enter street / nagar name"
+            data-placeholder-ta="தெரு / நகர் பெயரை உள்ளிடுங்கள்"
+            placeholder="Enter street / nagar name" required />
+        </label>
+
+        <label>
+          <span data-en="Email ID" data-ta="மின்னஞ்சல் முகவரி">மின்னஞ்சல் முகவரி</span>
+          <input type="email" name="email"
+            data-placeholder-en="name@example.com"
+            data-placeholder-ta="name@example.com"
+            placeholder="name@example.com" required />
+        </label>
+
+        <label>
+          <span data-en="Complaint Details" data-ta="புகார் விவரங்கள்">புகார் விவரங்கள்</span>
+          <textarea name="grievance" rows="5" minlength="20"
+            data-placeholder-en="Describe your issue clearly"
+            data-placeholder-ta="உங்கள் பிரச்சினையை தெளிவாக விளக்குங்கள்"
+            placeholder="Describe your issue clearly" required></textarea>
+        </label>
+
+        <label>
+          <span data-en="Upload ID Proof (JPG, PNG, WEBP, PDF - max 5MB)" data-ta="அடையாள சான்று பதிவேற்றவும் (JPG, PNG, WEBP, PDF - அதிகபட்சம் 5MB)">Upload ID Proof (JPG, PNG, WEBP, PDF - max 5MB)</span>
+          <input type="file" name="idProof" accept=".jpg,.jpeg,.png,.webp,.pdf" required />
+        </label>
+
+        <label>
+          <span data-en="Upload Issue Photos (up to 5 files, each max 5MB)" data-ta="சிக்கல் புகைப்படங்கள் பதிவேற்றவும் (5 கோப்புகள் வரை, ஒவ்வொருவும் அதிகபட்சம் 5MB)">Upload Issue Photos (up to 5 files, each max 5MB)</span>
+          <input type="file" name="complaintPhotos" accept=".jpg,.jpeg,.png,.webp,.pdf" multiple />
+        </label>
+
+        <button type="submit" data-en="Submit Complaint" data-ta="புகாரை சமர்ப்பிக்கவும்">Submit Complaint</button>
+      </form>
+    </section>
+  </main>
+
+  <%- include('partials/site-footer') %>
+</body>
+</html>

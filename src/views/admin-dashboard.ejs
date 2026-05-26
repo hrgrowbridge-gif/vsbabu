@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<%- include('partials/head', { title: 'MLA Dashboard' }) %>
+<body class="dashboard-body">
+  <header class="dashboard-header">
+    <div class="container dashboard-header-inner">
+      <div>
+        <p class="eyebrow">INTERNAL PANEL</p>
+        <h1>Kolathur Complaints Dashboard</h1>
+        <p>Signed in as <strong><%= adminUsername %></strong></p>
+      </div>
+      <form action="/admin/logout" method="POST">
+        <button class="secondary" type="submit">Logout</button>
+      </form>
+    </div>
+  </header>
+
+  <main class="container dashboard-main">
+    <% if (!complaints.length) { %>
+      <section class="card">
+        <h2>No complaints yet</h2>
+        <p>New submissions will appear here.</p>
+      </section>
+    <% } %>
+
+    <% complaints.forEach((item) => { %>
+      <section class="card complaint-item">
+        <h2><%= item.full_name %> - <span class="mono"><%= item.phone %></span></h2>
+        <p><strong>Area:</strong> <%= item.area %></p>
+        <p><strong>Street:</strong> <%= item.street_name %></p>
+        <p><strong>Email:</strong> <%= item.email %></p>
+        <p><strong>Submitted:</strong> <%= new Date(item.created_at).toLocaleString('en-IN') %></p>
+        <p><strong>Grievance:</strong> <%= item.grievance %></p>
+
+        <div class="file-links">
+          <a target="_blank" href="/admin/uploads/id-proof/<%= item.id_proof_filename %>">View ID Proof</a>
+          <% if (item.complaint_photo_filenames.length) { %>
+            <% item.complaint_photo_filenames.forEach((photo, index) => { %>
+              <a target="_blank" href="/admin/uploads/complaint-photos/<%= photo %>">Issue Photo <%= index + 1 %></a>
+            <% }) %>
+          <% } else { %>
+            <span>No issue photos uploaded</span>
+          <% } %>
+        </div>
+      </section>
+    <% }) %>
+  </main>
+</body>
+</html>
