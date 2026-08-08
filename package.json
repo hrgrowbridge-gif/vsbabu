@@ -19,6 +19,7 @@
     "node": ">=18.18.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.2",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.5.0",
     "ejs": "^3.1.10",

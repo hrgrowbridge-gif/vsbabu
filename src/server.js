@@ -2,6 +2,8 @@ require("dotenv").config();
 
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
+const crypto = require("crypto");
 const express = require("express");
 const session = require("express-session");
 const multer = require("multer");
@@ -9,16 +11,24 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const { insertComplaint, getAllComplaints } = require("./db");
 const { isAuthenticated, isValidAdminPassword } = require("./auth");
+const { isSupabaseConfigured, getSupabaseClient, getSupabaseBucket } = require("./supabase");
 
 const app = express();
 const port = process.env.PORT || 3000;
+const supabaseEnabled = isSupabaseConfigured();
 
 const publicPath = path.join(__dirname, "public");
-const idProofPath = path.join(__dirname, "uploads", "id-proof");
-const complaintPhotosPath = path.join(__dirname, "uploads", "complaint-photos");
+const isVercel = Boolean(process.env.VERCEL);
+const uploadsRoot = process.env.UPLOADS_DIR ||
+  (isVercel ? path.join(os.tmpdir(), "vs-babu", "uploads") : path.join(__dirname, "uploads"));
+const idProofPath = path.join(uploadsRoot, "id-proof");
+const complaintPhotosPath = path.join(uploadsRoot, "complaint-photos");
+const supabaseBucket = getSupabaseBucket();
 
-fs.mkdirSync(idProofPath, { recursive: true });
-fs.mkdirSync(complaintPhotosPath, { recursive: true });
+if (!supabaseEnabled) {
+  fs.mkdirSync(idProofPath, { recursive: true });
+  fs.mkdirSync(complaintPhotosPath, { recursive: true });
+}
 
 app.use(helmet({
   contentSecurityPolicy: false
@@ -59,19 +69,21 @@ function fileFilter(req, file, cb) {
   }
 }
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    if (file.fieldname === "idProof") {
-      cb(null, idProofPath);
-      return;
+const storage = supabaseEnabled
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+    destination: (req, file, cb) => {
+      if (file.fieldname === "idProof") {
+        cb(null, idProofPath);
+        return;
+      }
+      cb(null, complaintPhotosPath);
+    },
+    filename: (req, file, cb) => {
+      const safeOriginalName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+      cb(null, `${Date.now()}-${safeOriginalName}`);
     }
-    cb(null, complaintPhotosPath);
-  },
-  filename: (req, file, cb) => {
-    const safeOriginalName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-    cb(null, `${Date.now()}-${safeOriginalName}`);
-  }
-});
+  });
 
 const upload = multer({
   storage,
@@ -86,6 +98,40 @@ const complaintUpload = upload.fields([
   { name: "idProof", maxCount: 1 },
   { name: "complaintPhotos", maxCount: 5 }
 ]);
+
+function sanitizeOriginalName(name) {
+  return (name || "file").replace(/[^a-zA-Z0-9.\-_]/g, "_");
+}
+
+function isValidStoredObjectPath(value) {
+  if (!value || typeof value !== "string") {
+    return false;
+  }
+  if (value.includes("..")) {
+    return false;
+  }
+  return /^(id-proof|complaint-photos)\/[a-zA-Z0-9._\/-]+$/.test(value);
+}
+
+async function uploadToSupabase(file, folder) {
+  const supabase = getSupabaseClient();
+  const safeOriginalName = sanitizeOriginalName(file.originalname);
+  const objectPath = `${folder}/${Date.now()}-${crypto.randomUUID()}-${safeOriginalName}`;
+
+  const { error } = await supabase
+    .storage
+    .from(supabaseBucket)
+    .upload(objectPath, file.buffer, {
+      contentType: file.mimetype,
+      upsert: false
+    });
+
+  if (error) {
+    throw new Error(`File upload failed: ${error.message}`);
+  }
+
+  return objectPath;
+}
 
 function validateComplaint(body, files) {
   const errors = [];
@@ -145,7 +191,7 @@ app.get("/complaint", (req, res) => {
 });
 
 app.post("/complaints", (req, res) => {
-  complaintUpload(req, res, (err) => {
+  complaintUpload(req, res, async (err) => {
     if (err) {
       return res.redirect(`/complaint?error=${encodeURIComponent(err.message)}`);
     }
@@ -156,17 +202,31 @@ app.post("/complaints", (req, res) => {
       return res.redirect(`/complaint?error=${encodeURIComponent(errors.join(" "))}`);
     }
 
-    const idProofFilename = req.files.idProof[0].filename;
-    const complaintPhotoFilenames = (req.files.complaintPhotos || []).map((f) => f.filename);
+    try {
+      let idProofPath;
+      let complaintPhotoPaths;
 
-    insertComplaint({
-      ...normalized,
-      idProofFilename,
-      complaintPhotoFilenames,
-      createdAt: new Date().toISOString()
-    });
+      if (supabaseEnabled) {
+        idProofPath = await uploadToSupabase(req.files.idProof[0], "id-proof");
+        complaintPhotoPaths = await Promise.all(
+          (req.files.complaintPhotos || []).map((file) => uploadToSupabase(file, "complaint-photos"))
+        );
+      } else {
+        idProofPath = `id-proof/${req.files.idProof[0].filename}`;
+        complaintPhotoPaths = (req.files.complaintPhotos || []).map((file) => `complaint-photos/${file.filename}`);
+      }
 
-    return res.redirect("/complaint?success=Your complaint has been submitted successfully.");
+      await insertComplaint({
+        ...normalized,
+        idProofPath,
+        complaintPhotoPaths,
+        createdAt: new Date().toISOString()
+      });
+
+      return res.redirect("/complaint?success=Your complaint has been submitted successfully.");
+    } catch (uploadOrDbError) {
+      return res.redirect(`/complaint?error=${encodeURIComponent(uploadOrDbError.message)}`);
+    }
   });
 });
 
@@ -202,40 +262,56 @@ app.post("/admin/logout", isAuthenticated, (req, res) => {
   });
 });
 
-app.get("/admin/dashboard", isAuthenticated, (req, res) => {
-  const complaints = getAllComplaints();
-  res.render("admin-dashboard", {
-    complaints,
-    adminUsername: req.session.adminUsername
-  });
+app.get("/admin/dashboard", isAuthenticated, async (req, res, next) => {
+  try {
+    const complaints = await getAllComplaints();
+    res.render("admin-dashboard", {
+      complaints,
+      adminUsername: req.session.adminUsername
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
-app.get("/admin/uploads/:type/:filename", isAuthenticated, (req, res) => {
-  const { type, filename } = req.params;
+app.get("/admin/uploads", isAuthenticated, async (req, res, next) => {
+  const filePath = (req.query.path || "").toString();
 
-  if (!/^[a-zA-Z0-9._-]+$/.test(filename)) {
-    return res.status(400).send("Invalid file name");
-  }
-
-  let baseDir;
-  if (type === "id-proof") {
-    baseDir = idProofPath;
-  } else if (type === "complaint-photos") {
-    baseDir = complaintPhotosPath;
-  } else {
-    return res.status(404).send("File type not found");
-  }
-
-  const absoluteFile = path.join(baseDir, filename);
-  if (!absoluteFile.startsWith(baseDir)) {
+  if (!isValidStoredObjectPath(filePath)) {
     return res.status(400).send("Invalid path");
   }
 
-  if (!fs.existsSync(absoluteFile)) {
-    return res.status(404).send("File not found");
-  }
+  try {
+    if (supabaseEnabled) {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .storage
+        .from(supabaseBucket)
+        .createSignedUrl(filePath, 60);
 
-  return res.sendFile(absoluteFile);
+      if (error || !data?.signedUrl) {
+        return res.status(404).send("File not found");
+      }
+
+      return res.redirect(data.signedUrl);
+    }
+
+    const [folder, filename] = filePath.split("/");
+    const baseDir = folder === "id-proof" ? idProofPath : complaintPhotosPath;
+    const absoluteFile = path.join(baseDir, filename || "");
+
+    if (!absoluteFile.startsWith(baseDir)) {
+      return res.status(400).send("Invalid path");
+    }
+
+    if (!fs.existsSync(absoluteFile)) {
+      return res.status(404).send("File not found");
+    }
+
+    return res.sendFile(absoluteFile);
+  } catch (error) {
+    return next(error);
+  }
 });
 
 app.use((err, req, res, next) => {

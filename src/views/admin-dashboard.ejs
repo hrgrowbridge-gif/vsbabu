@@ -33,10 +33,14 @@
         <p><strong>Grievance:</strong> <%= item.grievance %></p>
 
         <div class="file-links">
-          <a target="_blank" href="/admin/uploads/id-proof/<%= item.id_proof_filename %>">View ID Proof</a>
-          <% if (item.complaint_photo_filenames.length) { %>
-            <% item.complaint_photo_filenames.forEach((photo, index) => { %>
-              <a target="_blank" href="/admin/uploads/complaint-photos/<%= photo %>">Issue Photo <%= index + 1 %></a>
+          <% if (item.id_proof_path) { %>
+            <a target="_blank" href="/admin/uploads?path=<%= encodeURIComponent(item.id_proof_path) %>">View ID Proof</a>
+          <% } else { %>
+            <span>ID proof unavailable</span>
+          <% } %>
+          <% if ((item.complaint_photo_paths || []).length) { %>
+            <% item.complaint_photo_paths.forEach((photoPath, index) => { %>
+              <a target="_blank" href="/admin/uploads?path=<%= encodeURIComponent(photoPath) %>">Issue Photo <%= index + 1 %></a>
             <% }) %>
           <% } else { %>
             <span>No issue photos uploaded</span>

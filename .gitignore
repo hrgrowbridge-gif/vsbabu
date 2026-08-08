@@ -5,3 +5,4 @@ src/uploads/*
 !src/uploads/.gitkeep
 !src/uploads/id-proof/.gitkeep
 !src/uploads/complaint-photos/.gitkeep
+.vercel
