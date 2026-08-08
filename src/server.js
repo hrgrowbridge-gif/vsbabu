@@ -16,9 +16,11 @@ const { isSupabaseConfigured, getSupabaseClient, getSupabaseBucket } = require("
 const app = express();
 const port = process.env.PORT || 3000;
 const supabaseEnabled = isSupabaseConfigured();
+const isVercel = Boolean(process.env.VERCEL);
+const missingSupabaseEnv = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"].filter((key) => !process.env[key]);
+const requireSupabase = isVercel || process.env.REQUIRE_SUPABASE === "true";
 
 const publicPath = path.join(__dirname, "public");
-const isVercel = Boolean(process.env.VERCEL);
 const uploadsRoot = process.env.UPLOADS_DIR ||
   (isVercel ? path.join(os.tmpdir(), "vs-babu", "uploads") : path.join(__dirname, "uploads"));
 const idProofPath = path.join(uploadsRoot, "id-proof");
@@ -28,6 +30,10 @@ const supabaseBucket = getSupabaseBucket();
 if (!supabaseEnabled) {
   fs.mkdirSync(idProofPath, { recursive: true });
   fs.mkdirSync(complaintPhotosPath, { recursive: true });
+}
+
+if (requireSupabase && !supabaseEnabled) {
+  console.error(`Supabase is required but not configured. Missing: ${missingSupabaseEnv.join(", ")}`);
 }
 
 app.use(helmet({
@@ -192,6 +198,12 @@ app.get("/complaint", (req, res) => {
 
 app.post("/complaints", (req, res) => {
   complaintUpload(req, res, async (err) => {
+    if (requireSupabase && !supabaseEnabled) {
+      return res.redirect(
+        `/complaint?error=${encodeURIComponent("Server storage is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel.")}`
+      );
+    }
+
     if (err) {
       return res.redirect(`/complaint?error=${encodeURIComponent(err.message)}`);
     }
