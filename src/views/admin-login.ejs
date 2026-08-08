@@ -1,29 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
 <%- include('partials/head', { title: 'MLA Dashboard Login' }) %>
-<body class="admin-body">
-  <main class="admin-login-page">
-    <section class="admin-login-card">
-      <p class="eyebrow">AUTHORIZED ACCESS ONLY</p>
-      <h1>MLA Dashboard Login</h1>
-      <p>Use the admin credentials configured in your .env file.</p>
+<body class="<%= isLoggedIn ? 'dashboard-body' : 'admin-body' %>">
+  <% if (!isLoggedIn) { %>
+    <main class="admin-login-page">
+      <section class="admin-login-card">
+        <p class="eyebrow">AUTHORIZED ACCESS ONLY</p>
+        <h1>MLA Dashboard Login</h1>
+        <p>Use the admin credentials configured in your .env file.</p>
 
-      <% if (errorMessage) { %>
-        <div class="flash error"><%= errorMessage %></div>
+        <% if (errorMessage) { %>
+          <div class="flash error"><%= errorMessage %></div>
+        <% } %>
+
+        <form action="/secure-mla-login" method="POST" class="admin-login-form">
+          <label>
+            Username
+            <input type="text" name="username" required />
+          </label>
+          <label>
+            Password
+            <input type="password" name="password" required />
+          </label>
+          <button type="submit">Login</button>
+        </form>
+      </section>
+    </main>
+  <% } else { %>
+    <header class="dashboard-header">
+      <div class="container dashboard-header-inner">
+        <div>
+          <p class="eyebrow">INTERNAL PANEL</p>
+          <h1>Kolathur Complaints Dashboard</h1>
+          <p>Signed in as <strong><%= adminUsername %></strong></p>
+        </div>
+        <form action="/admin/logout" method="POST">
+          <button class="secondary" type="submit">Logout</button>
+        </form>
+      </div>
+    </header>
+
+    <main class="container dashboard-main">
+      <% if (!complaints.length) { %>
+        <section class="card">
+          <h2>No complaints yet</h2>
+          <p>New submissions will appear here.</p>
+        </section>
       <% } %>
 
-      <form action="/secure-mla-login" method="POST" class="admin-login-form">
-        <label>
-          Username
-          <input type="text" name="username" required />
-        </label>
-        <label>
-          Password
-          <input type="password" name="password" required />
-        </label>
-        <button type="submit">Login</button>
-      </form>
-    </section>
-  </main>
+      <% complaints.forEach((item) => { %>
+        <section class="card complaint-item">
+          <h2><%= item.full_name %> - <span class="mono"><%= item.phone %></span></h2>
+          <p><strong>Area:</strong> <%= item.area %></p>
+          <p><strong>Street:</strong> <%= item.street_name %></p>
+          <p><strong>Email:</strong> <%= item.email %></p>
+          <p><strong>Submitted:</strong> <%= new Date(item.created_at).toLocaleString('en-IN') %></p>
+          <p><strong>Grievance:</strong> <%= item.grievance %></p>
+
+          <div class="file-links">
+            <% if (item.id_proof_path) { %>
+              <a target="_blank" href="/admin/uploads?path=<%= encodeURIComponent(item.id_proof_path) %>">View ID Proof</a>
+            <% } else { %>
+              <span>ID proof unavailable</span>
+            <% } %>
+            <% if ((item.complaint_photo_paths || []).length) { %>
+              <% item.complaint_photo_paths.forEach((photoPath, index) => { %>
+                <a target="_blank" href="/admin/uploads?path=<%= encodeURIComponent(photoPath) %>">Issue Photo <%= index + 1 %></a>
+              <% }) %>
+            <% } else { %>
+              <span>No issue photos uploaded</span>
+            <% } %>
+          </div>
+        </section>
+      <% }) %>
+    </main>
+  <% } %>
 </body>
 </html>

@@ -230,10 +230,27 @@ app.post("/complaints", (req, res) => {
   });
 });
 
-app.get("/secure-mla-login", (req, res) => {
-  res.render("admin-login", {
-    errorMessage: req.query.error || ""
-  });
+app.get("/secure-mla-login", async (req, res, next) => {
+  try {
+    if (req.session && req.session.isAdminLoggedIn) {
+      const complaints = await getAllComplaints();
+      return res.render("admin-login", {
+        errorMessage: "",
+        isLoggedIn: true,
+        adminUsername: req.session.adminUsername,
+        complaints
+      });
+    }
+
+    return res.render("admin-login", {
+      errorMessage: req.query.error || "",
+      isLoggedIn: false,
+      adminUsername: "",
+      complaints: []
+    });
+  } catch (error) {
+    return next(error);
+  }
 });
 
 app.post("/secure-mla-login", async (req, res) => {
@@ -253,7 +270,7 @@ app.post("/secure-mla-login", async (req, res) => {
   req.session.isAdminLoggedIn = true;
   req.session.adminUsername = username;
 
-  return res.redirect("/admin/dashboard");
+  return res.redirect("/secure-mla-login");
 });
 
 app.post("/admin/logout", isAuthenticated, (req, res) => {
